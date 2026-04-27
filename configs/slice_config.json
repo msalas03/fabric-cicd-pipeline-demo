@@ -1,0 +1,7 @@
+{
+    "slicename": "test-slice-001",
+    "slicegraph": "graph-definition.json",
+    "sshkey": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCfakekey123 example@test",
+    "projectname": "demo-project",
+    "scope": "all"
+  }
