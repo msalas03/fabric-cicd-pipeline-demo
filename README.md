@@ -38,7 +38,7 @@ This project demonstrates two approaches to automation:
 Python Script → subprocess → fabric-cli → Remote Services
 ```
 
-* Fast to prototype
+* Fast to prototype and useful for manual execution
 * Relies on environment variables and shell context
 * Returns unstructured output (stdout/stderr)
 
@@ -50,9 +50,9 @@ Python Script → subprocess → fabric-cli → Remote Services
 Python Script → fabric_cicd SDK → Structured Objects → Remote Services
 ```
 
-* Uses typed inputs (e.g., TokenCredential)
-* Returns structured results (DeploymentResult)
-* Better suited for CI/CD and testing
+* Uses typed inputs (e.g., `TokenCredential`)
+* Returns structured results (`DeploymentResult`)
+* Better suited for CI/CD, testing, and scalable automation
 
 ---
 
@@ -82,9 +82,9 @@ Deployment inputs are externalized into JSON files:
 
 This enables:
 
-* reusability
-* separation of logic and configuration
-* easier CI/CD integration
+* Reusability
+* Separation of logic and configuration
+* Easier CI/CD integration
 
 ---
 
@@ -104,7 +104,7 @@ This enables:
 `scripts/deploy_with_sdk.py`:
 
 * Uses `fabric_cicd.deploy_with_config`
-* Demonstrates required inputs (config + TokenCredential)
+* Demonstrates required inputs (config + `TokenCredential`)
 * Inspects core SDK objects:
 
   * `FabricWorkspace`
@@ -138,24 +138,28 @@ This enables:
 
 ### CLI vs SDK Tradeoff
 
-* CLI is useful for quick execution but harder to scale
+* CLI is useful for quick execution and experimentation, but harder to scale and test in automation-heavy workflows
 * SDK provides structured inputs/outputs and better integration for automation
+
+---
 
 ### Fail-Fast Design
 
 Early validation of environment variables and dependencies:
 
-* reduces debugging complexity
-* prevents wasted CI/CD runs
-* improves reliability
+* Reduces debugging complexity
+* Prevents wasted CI/CD runs
+* Improves reliability
+
+---
 
 ### Environment-Driven Configuration
 
 The workflow depends on:
 
-* service endpoints
-* authentication tokens
-* runtime environment variables
+* Service endpoints
+* Authentication tokens
+* Runtime environment variables
 
 ---
 
@@ -174,9 +178,9 @@ The workflow depends on:
 This project does **not** include real Fabric credentials.
 Instead, it focuses on:
 
-* structure
-* automation patterns
-* pipeline design
+* Structure
+* Automation patterns
+* Pipeline design
 
 This mirrors early-stage CI/CD development before secrets are introduced.
 
