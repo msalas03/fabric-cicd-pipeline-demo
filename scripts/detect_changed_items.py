@@ -1,14 +1,30 @@
 from pathlib import Path
-from fabric_cicd import get_changed_items
+import subprocess
 import os
+from fabric_cicd import get_changed_items
 
 DEPLOY_RELEVANT_PREFIXES = [
     "configs/",
     "scripts/",
 ]
 
-def detect_changed_items(repo_dir: Path, compare_ref: str = "HEAD~1") -> list[str]:
+def detect_fabric_changed_items(repo_dir: Path, compare_ref: str = "HEAD~1") -> list[str]:
     return get_changed_items(repository_directory=repo_dir, git_compare_ref=compare_ref)
+
+def detect_git_changed_files(repo_dir: Path, compare_ref: str = "HEAD~1") -> list[str]:
+    result = subprocess.run(
+        ["git", "diff", "--name-only", compare_ref, "HEAD"],
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip())
+
+    files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return files
 
 def is_deploy_relevant(path: str) -> bool:
     normalized = path.replace("\\", "/")
@@ -29,41 +45,55 @@ def main():
     print("[INFO] Detecting changed items...")
     print(f"[INFO] Repository directory: {repo_dir}")
 
+    fabric_changed_items = []
+    git_changed_files = []
+
     try:
-        changed_items = detect_changed_items(repo_dir)
-        classified = classify_changed_items(changed_items)
-
-        if changed_items:
-            print("[INFO] Changed items detected:")
-            for item in changed_items:
-                print(f" - {item}")
-        else:
-            print("[INFO] No changed items detected.")
-
-        print("\n[INFO] Deploy-relevant items:")
-        if classified["deploy_relevant"]:
-            for item in classified["deploy_relevant"]:
-                print(f" - {item}")
-        else:
-            print(" - None")
-
-        print("\n[INFO] Non-deploy items:")
-        if classified["non_deploy"]:
-            for item in classified["non_deploy"]:
-                print(f" - {item}")
-        else:
-            print(" - None")
-
+        fabric_changed_items = detect_fabric_changed_items(repo_dir)
     except Exception as e:
-        print("[ERROR] Failed to detect or classify changed items:")
+        print("[WARN] Fabric change detection failed:")
+        print(e)
+
+    try:
+        git_changed_files = detect_git_changed_files(repo_dir)
+    except Exception as e:
+        print("[ERROR] Git file change detection failed:")
         print(e)
         raise
 
-    has_deploy_relevant = bool(classified["deploy_relevant"])
+    print("\n[INFO] Fabric-recognized changed items:")
+    if fabric_changed_items:
+        for item in fabric_changed_items:
+            print(f" - {item}")
+    else:
+        print(" - None")
 
+    print("\n[INFO] Git changed files:")
+    if git_changed_files:
+        for item in git_changed_files:
+            print(f" - {item}")
+    else:
+        print(" - None")
+
+    classified = classify_changed_items(git_changed_files)
+
+    print("\n[INFO] Deploy-relevant files:")
+    if classified["deploy_relevant"]:
+        for item in classified["deploy_relevant"]:
+            print(f" - {item}")
+    else:
+        print(" - None")
+
+    print("\n[INFO] Non-deploy files:")
+    if classified["non_deploy"]:
+        for item in classified["non_deploy"]:
+            print(f" - {item}")
+    else:
+        print(" - None")
+
+    has_deploy_relevant = bool(classified["deploy_relevant"])
     print(f"\n[INFO] Deploy relevant changes present: {has_deploy_relevant}")
 
-    # Export to GitHub Actions
     if "GITHUB_OUTPUT" in os.environ:
         with open(os.environ["GITHUB_OUTPUT"], "a") as f:
             f.write(f"deploy_relevant={str(has_deploy_relevant).lower()}\n")
