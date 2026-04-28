@@ -46,6 +46,9 @@ jobs:
       - name: Run SDK inspection
         run: python scripts/deploy_with_sdk.py
 
+      - name: Detect changed items
+        run: python scripts/detect_changed_items.py
+
       - name: Run environment validation
         run: python scripts/validate_fabric_env.py
 
