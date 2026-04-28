@@ -11,33 +11,39 @@ AUTH_ENV_VARS = [
     "FABRIC_REFRESH_TOKEN",
 ]
 
-def main():
-    env_mode = os.environ.get("FABRIC_ENV", "dev")
+def validate_environment(env: dict) -> tuple[bool, list[str]]:
+    required = ["FABRIC_ORCHESTRATOR_HOST", "FABRIC_CREDMGR_HOST"]
+    missing = [var for var in required if not env.get(var)]
 
-    if env_mode == "dev":
-        print("[INFO] DEV mode detected - skipping strict validation.")
-        sys.exit(0)
+    has_auth = bool(env.get("FABRIC_ID_TOKEN") or env.get("FABRIC_REFRESH_TOKEN"))
 
-    print("[INFO] Validating Fabric execution environment...")
+    errors = []
 
-    missing_required = [var for var in REQUIRED_ENV_VARS if not os.environ.get(var)]
-    has_auth = any(os.environ.get(var) for var in AUTH_ENV_VARS)
-
-    if missing_required:
-        print("[ERROR] Missing required environment variables:")
-        for var in missing_required:
-            print(f" - {var}")
+    if missing:
+        errors.append("missing_required")
 
     if not has_auth:
+        errors.append("missing_auth")
+
+    return (len(errors) == 0), errors
+
+def main():
+    print("[INFO] Validating Fabric execution environment...")
+
+    is_valid, errors = validate_environment(os.environ)
+
+    if "missing_required" in errors:
+        print("[ERROR] Missing required environment variables:")
+        print(" - FABRIC_ORCHESTRATOR_HOST")
+        print(" - FABRIC_CREDMGR_HOST")
+
+    if "missing_auth" in errors:
         print("[ERROR] Missing authentication:")
         print(" - Set FABRIC_ID_TOKEN or FABRIC_REFRESH_TOKEN")
 
-    if missing_required or not has_auth:
+    if not is_valid:
         print("[INFO] Validation failed.")
         sys.exit(1)
 
     print("[INFO] Validation passed.")
     sys.exit(0)
-
-if __name__ == "__main__":
-    main()
