@@ -1,5 +1,6 @@
 from pathlib import Path
 from fabric_cicd import get_changed_items
+import os
 
 DEPLOY_RELEVANT_PREFIXES = [
     "configs/",
@@ -57,6 +58,15 @@ def main():
         print("[ERROR] Failed to detect or classify changed items:")
         print(e)
         raise
+
+    has_deploy_relevant = bool(classified["deploy_relevant"])
+
+    print(f"\n[INFO] Deploy relevant changes present: {has_deploy_relevant}")
+
+    # Export to GitHub Actions
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"deploy_relevant={str(has_deploy_relevant).lower()}\n")
 
 if __name__ == "__main__":
     main()

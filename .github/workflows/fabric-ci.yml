@@ -30,6 +30,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     needs: test
+    outputs:
+      deploy_relevant: ${{ steps.detect.outputs.deploy_relevant }}
 
     steps:
       - name: Check out repository
@@ -58,7 +60,11 @@ jobs:
 
     steps:
       - name: Deployment placeholder
-        if: github.ref == 'refs/heads/main' && env.FABRIC_ENV != 'dev'
+        if: needs.validate.outputs.deploy_relevant == 'true'
         run: |
-          echo "Deployment step would run here"
-          echo "Requires valid credentials and environment setup"
+          echo "Deploying because relevant files changed"
+
+      - name: Skip deployment
+        if: needs.validate.outputs.deploy_relevant != 'true'
+        run: |
+          echo "Skipping deployment - no relevant changes"
