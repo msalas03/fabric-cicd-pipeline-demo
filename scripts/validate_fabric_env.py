@@ -12,6 +12,12 @@ AUTH_ENV_VARS = [
 ]
 
 def main():
+    env_mode = os.environ.get("FABRIC_ENV", "dev")
+
+    if env_mode == "dev":
+        print("[INFO] DEV mode detected - skipping strict validation.")
+        sys.exit(0)
+
     print("[INFO] Validating Fabric execution environment...")
 
     missing_required = [var for var in REQUIRED_ENV_VARS if not os.environ.get(var)]

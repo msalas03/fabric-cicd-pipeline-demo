@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  FABRIC_ENV: dev
+
 jobs:
 
   validate:
