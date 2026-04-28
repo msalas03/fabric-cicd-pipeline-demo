@@ -51,7 +51,17 @@ jobs:
         run: python scripts/deploy_with_sdk.py
 
       - name: Detect changed items
-        run: python scripts/detect_changed_items.py
+        id: detect
+        run: python -m scripts.detect_changed_items
+
+      - name: Generate deployment plan
+        run: python -m scripts.generate_deployment_plan
+
+      - name: Upload deployment plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-plan
+          path: artifacts/deployment_plan.json
 
       - name: Run environment validation
         run: python scripts/validate_fabric_env.py
@@ -61,6 +71,15 @@ jobs:
     needs: validate
 
     steps:
+      - name: Download deployment plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-plan
+          path: artifacts
+
+      - name: Show deployment plan
+        run: cat artifacts/deployment_plan.json
+
       - name: Deployment placeholder
         if: needs.validate.outputs.deploy_relevant == 'true'
         run: |
