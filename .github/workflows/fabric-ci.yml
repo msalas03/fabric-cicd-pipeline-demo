@@ -4,9 +4,18 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+  inputs:
+    fabric_env:
+      description: "Target environment"
+      required: true
+      default: "dev"
+      type: choice
+      options:
+        - dev
+        - prod
 
 env:
-  FABRIC_ENV: dev
+  FABRIC_ENV: ${{ github.event.inputs.fabric_env || 'dev' }}
 
 jobs:
   lint:
@@ -36,6 +45,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -102,11 +113,12 @@ jobs:
         run: cat artifacts/deployment_plan.json
 
       - name: Deployment placeholder
-        if: needs.validate.outputs.deploy_relevant == 'true'
+        if: needs.validate.outputs.deploy_relevant == 'true' && github.ref == 'refs/heads/main' && env.FABRIC_ENV == 'prod'
         run: |
           echo "Deploying because relevant files changed"
+          echo "Environment is prod and branch is main"
 
       - name: Skip deployment
-        if: needs.validate.outputs.deploy_relevant != 'true'
+        if: needs.validate.outputs.deploy_relevant != 'true' || github.ref != 'refs/heads/main' || env.FABRIC_ENV != 'prod'
         run: |
-          echo "Skipping deployment - no relevant changes"
+          echo "Skipping deployment - conditions not met"

@@ -17,10 +17,13 @@ def build_deployment_plan(
     deploy_relevant_files: list[str],
     non_deploy_files: list[str],
 ) -> dict:
+    deployment_allowed = environment == "prod" and bool(deploy_relevant_files)
+
     return {
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "environment": environment,
         "deploy_relevant": bool(deploy_relevant_files),
+        "deployment_allowed": deployment_allowed,
         "fabric_changed_items": fabric_changed_items,
         "git_changed_files": git_changed_files,
         "deploy_relevant_files": deploy_relevant_files,
