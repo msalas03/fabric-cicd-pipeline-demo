@@ -21,6 +21,8 @@ def test_write_job_summary(tmp_path, monkeypatch):
     assert "`dev`" in content
     assert "`True`" in content
     assert "`scripts/create_slice.py`" in content
+    assert "Deployment Decision" in content
+    assert "Not a production environment." in content
 
 def test_build_deployment_plan_with_deploy_relevant_files():
     plan = build_deployment_plan(

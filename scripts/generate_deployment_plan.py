@@ -35,11 +35,21 @@ def write_job_summary(plan: dict) -> None:
     if not summary_path:
         return
 
+    deployment_reason = ""
+
+    if not plan["deploy_relevant"]:
+        deployment_reason = "No deploy-relevant changes detected."
+    elif plan["environment"] != "prod":
+        deployment_reason = "Not a production environment."
+    else:
+        deployment_reason = "Deployment conditions satisfied."
+
     lines = [
         "# Deployment Plan Summary",
         "",
         f"- **Environment:** `{plan['environment']}`",
         f"- **Deploy Relevant:** `{plan['deploy_relevant']}`",
+        f"- **Deployment Allowed:** `{plan['deployment_allowed']}`",
         "",
         "## Git Changed Files",
     ]
@@ -63,15 +73,11 @@ def write_job_summary(plan: dict) -> None:
     else:
         lines.append("- None")
 
-    lines.append("")
-    decision = (
-        "Deployment would proceed."
-        if plan["deploy_relevant"]
-        else "Deployment would be skipped."
-    )
-
-    lines.append("## Deployment Decision")
-    lines.append(decision)
+    lines.extend([
+        "",
+        "## Deployment Decision",
+        deployment_reason,
+    ])
 
     with open(summary_path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
