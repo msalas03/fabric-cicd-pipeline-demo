@@ -4,15 +4,15 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  inputs:
-    fabric_env:
-      description: "Target environment"
-      required: true
-      default: "dev"
-      type: choice
-      options:
-        - dev
-        - prod
+    inputs:
+      fabric_env:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
 
 env:
   FABRIC_ENV: ${{ github.event.inputs.fabric_env || 'dev' }}
