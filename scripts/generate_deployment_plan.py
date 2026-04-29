@@ -1,13 +1,14 @@
-from pathlib import Path
-from datetime import datetime, UTC
 import json
 import os
+from datetime import UTC, datetime
+from pathlib import Path
 
 from scripts.detect_changed_items import (
+    classify_changed_items,
     detect_fabric_changed_items,
     detect_git_changed_files,
-    classify_changed_items,
 )
+
 
 def build_deployment_plan(
     environment: str,

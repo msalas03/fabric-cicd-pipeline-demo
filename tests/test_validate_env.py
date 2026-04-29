@@ -1,5 +1,6 @@
 from scripts.validate_fabric_env import validate_environment
 
+
 def test_valid_environment():
     env = {
         "FABRIC_ORCHESTRATOR_HOST": "x",

@@ -1,11 +1,13 @@
 from pathlib import Path
 from unittest.mock import patch
+
 from scripts.detect_changed_items import (
+    classify_changed_items,
     detect_fabric_changed_items,
     detect_git_changed_files,
     is_deploy_relevant,
-    classify_changed_items,
 )
+
 
 def test_detect_fabric_changed_items_returns_list():
     repo_dir = Path(".")

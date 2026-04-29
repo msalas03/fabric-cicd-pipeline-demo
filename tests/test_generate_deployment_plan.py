@@ -1,5 +1,6 @@
 from scripts.generate_deployment_plan import build_deployment_plan
 
+
 def test_build_deployment_plan_with_deploy_relevant_files():
     plan = build_deployment_plan(
         environment="dev",

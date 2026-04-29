@@ -1,5 +1,7 @@
 import inspect
-from fabric_cicd import deploy_with_config, FabricWorkspace, DeploymentResult, get_changed_items
+
+from fabric_cicd import DeploymentResult, FabricWorkspace, deploy_with_config, get_changed_items
+
 
 def main():
     print("[deploy_with_config signature]")

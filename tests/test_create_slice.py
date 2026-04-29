@@ -1,5 +1,6 @@
 from scripts.create_slice import build_command
 
+
 def test_build_command_basic():
     config = {
         "slicename": "test",

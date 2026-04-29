@@ -1,6 +1,7 @@
-from pathlib import Path
-import subprocess
 import os
+import subprocess
+from pathlib import Path
+
 from fabric_cicd import get_changed_items
 
 DEPLOY_RELEVANT_PREFIXES = [
