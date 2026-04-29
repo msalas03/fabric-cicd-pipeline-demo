@@ -6,10 +6,17 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_DIR = BASE_DIR / "configs"
-CONFIG_PATH = CONFIG_DIR / "slice_config.json"
+
+def get_environment() -> str:
+    return os.environ.get("FABRIC_ENV", "dev")
+
+def get_config_path() -> Path:
+    env_name = get_environment()
+    return CONFIG_DIR / env_name / "slice_config.json"
 
 def load_config():
-    with open(CONFIG_PATH, "r") as f:
+    config_path = get_config_path()
+    with open(config_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def build_command(config):
@@ -53,6 +60,9 @@ def run():
     if not validate_env():
         print("[INFO] Validation failed. Exiting.")
         sys.exit(1)
+
+    print(f"[INFO] Using FABRIC_ENV={get_environment()}")
+    print(f"[INFO] Loading config from: {get_config_path()}")
 
     config = load_config()
     cmd = build_command(config)
