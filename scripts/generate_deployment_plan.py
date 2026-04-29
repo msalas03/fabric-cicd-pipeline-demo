@@ -27,6 +27,52 @@ def build_deployment_plan(
         "non_deploy_files": non_deploy_files,
     }
 
+def write_job_summary(plan: dict) -> None:
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        return
+
+    lines = [
+        "# Deployment Plan Summary",
+        "",
+        f"- **Environment:** `{plan['environment']}`",
+        f"- **Deploy Relevant:** `{plan['deploy_relevant']}`",
+        "",
+        "## Git Changed Files",
+    ]
+
+    if plan["git_changed_files"]:
+        lines.extend([f"- `{item}`" for item in plan["git_changed_files"]])
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Deploy-Relevant Files"])
+
+    if plan["deploy_relevant_files"]:
+        lines.extend([f"- `{item}`" for item in plan["deploy_relevant_files"]])
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Non-Deploy Files"])
+
+    if plan["non_deploy_files"]:
+        lines.extend([f"- `{item}`" for item in plan["non_deploy_files"]])
+    else:
+        lines.append("- None")
+
+    lines.append("")
+    decision = (
+        "Deployment would proceed."
+        if plan["deploy_relevant"]
+        else "Deployment would be skipped."
+    )
+
+    lines.append("## Deployment Decision")
+    lines.append(decision)
+
+    with open(summary_path, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
 def main():
     repo_dir = Path(__file__).resolve().parent.parent
     artifacts_dir = repo_dir / "artifacts"
@@ -58,6 +104,10 @@ def main():
 
     print(f"[INFO] Deployment plan written to: {output_path}")
     print(json.dumps(plan, indent=2))
+
+    if "GITHUB_STEP_SUMMARY" in os.environ:
+        print("[INFO] Writing GitHub Actions job summary")
+        write_job_summary(plan)
 
 if __name__ == "__main__":
     main()
