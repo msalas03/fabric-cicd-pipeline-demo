@@ -64,6 +64,7 @@ jobs:
     needs: test
     outputs:
       deploy_relevant: ${{ steps.detect.outputs.deploy_relevant }}
+      deployment_allowed: ${{ steps.plan.outputs.deployment_allowed }}
 
     steps:
       - name: Check out repository
@@ -80,13 +81,14 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       - name: Run SDK inspection
-        run: python scripts/deploy_with_sdk.py
+        run: python -m scripts.deploy_with_sdk
 
       - name: Detect changed items
         id: detect
         run: python -m scripts.detect_changed_items
 
       - name: Generate deployment plan
+        id: plan
         run: python -m scripts.generate_deployment_plan
 
       - name: Upload deployment plan artifact
@@ -96,7 +98,7 @@ jobs:
           path: artifacts/deployment_plan.json
 
       - name: Run environment validation
-        run: python scripts/validate_fabric_env.py
+        run: python -m scripts.validate_fabric_env
 
   deploy:
     runs-on: ubuntu-latest
@@ -115,12 +117,11 @@ jobs:
         run: cat artifacts/deployment_plan.json
 
       - name: Deployment placeholder
-        if: needs.validate.outputs.deploy_relevant == 'true' && github.ref == 'refs/heads/main' && (github.event.inputs.fabric_env == 'prod')
+        if: needs.validate.outputs.deployment_allowed == 'true'
         run: |
-          echo "Deploying because relevant files changed"
-          echo "Environment is prod and branch is main"
+          echo "Deploying because policy evaluation allowed deployment"
 
       - name: Skip deployment
-        if: needs.validate.outputs.deploy_relevant != 'true' || github.ref != 'refs/heads/main' || (github.event.inputs.fabric_env != 'prod')
+        if: needs.validate.outputs.deployment_allowed != 'true'
         run: |
-          echo "Skipping deployment - conditions not met"
+          echo "Skipping deployment - policy evaluation did not allow deployment"

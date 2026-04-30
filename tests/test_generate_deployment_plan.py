@@ -7,6 +7,7 @@ def test_write_job_summary(tmp_path, monkeypatch):
 
     plan = build_deployment_plan(
         environment="dev",
+        branch="main",
         fabric_changed_items=[],
         git_changed_files=["scripts/create_slice.py"],
         deploy_relevant_files=["scripts/create_slice.py"],
@@ -19,14 +20,17 @@ def test_write_job_summary(tmp_path, monkeypatch):
 
     assert "Deployment Plan Summary" in content
     assert "`dev`" in content
+    assert "`main`" in content
     assert "`True`" in content
     assert "`scripts/create_slice.py`" in content
     assert "Deployment Decision" in content
-    assert "Not a production environment." in content
+    assert "Deployment policy checks passed." in content
+
 
 def test_build_deployment_plan_with_deploy_relevant_files():
     plan = build_deployment_plan(
         environment="prod",
+        branch="main",
         fabric_changed_items=[],
         git_changed_files=["scripts/create_slice.py"],
         deploy_relevant_files=["scripts/create_slice.py"],
@@ -34,8 +38,11 @@ def test_build_deployment_plan_with_deploy_relevant_files():
     )
 
     assert plan["environment"] == "prod"
+    assert plan["branch"] == "main"
     assert plan["deploy_relevant"] is True
     assert plan["deployment_allowed"] is True
+    assert plan["policy_failed_checks"] == []
+    assert plan["policy_decision_reason"] == "Deployment policy checks passed."
     assert plan["git_changed_files"] == ["scripts/create_slice.py"]
     assert plan["deploy_relevant_files"] == ["scripts/create_slice.py"]
     assert plan["non_deploy_files"] == []
@@ -45,6 +52,7 @@ def test_build_deployment_plan_with_deploy_relevant_files():
 def test_build_deployment_plan_without_deploy_relevant_files():
     plan = build_deployment_plan(
         environment="dev",
+        branch="main",
         fabric_changed_items=[],
         git_changed_files=["README.md"],
         deploy_relevant_files=[],
@@ -52,8 +60,11 @@ def test_build_deployment_plan_without_deploy_relevant_files():
     )
 
     assert plan["environment"] == "dev"
+    assert plan["branch"] == "main"
     assert plan["deploy_relevant"] is False
-    assert plan["deployment_allowed"] is False
+    assert plan["deployment_allowed"] is True
+    assert plan["policy_failed_checks"] == []
+    assert plan["policy_decision_reason"] == "Deployment policy checks passed."
     assert plan["git_changed_files"] == ["README.md"]
     assert plan["deploy_relevant_files"] == []
     assert plan["non_deploy_files"] == ["README.md"]

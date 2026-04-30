@@ -1,7 +1,7 @@
 venv/
 __pycache__/
 *.pyc
-.env
-*.log
-.vscode/
+.pytest_cache/
+.ruff_cache/
 artifacts/
+.vscode/

@@ -8,22 +8,35 @@ from scripts.detect_changed_items import (
     detect_fabric_changed_items,
     detect_git_changed_files,
 )
+from scripts.evaluate_deployment_policy import evaluate_policy, load_policy
 
 
 def build_deployment_plan(
     environment: str,
+    branch: str,
     fabric_changed_items: list[str],
     git_changed_files: list[str],
     deploy_relevant_files: list[str],
     non_deploy_files: list[str],
 ) -> dict:
-    deployment_allowed = environment == "prod" and bool(deploy_relevant_files)
+    policy = load_policy()
+    deploy_relevant = bool(deploy_relevant_files)
+
+    policy_result = evaluate_policy(
+        environment=environment,
+        branch=branch,
+        deploy_relevant=deploy_relevant,
+        policy=policy,
+    )
 
     return {
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "environment": environment,
-        "deploy_relevant": bool(deploy_relevant_files),
-        "deployment_allowed": deployment_allowed,
+        "branch": branch,
+        "deploy_relevant": deploy_relevant,
+        "deployment_allowed": policy_result["deployment_allowed"],
+        "policy_failed_checks": policy_result["failed_checks"],
+        "policy_decision_reason": policy_result["decision_reason"],
         "fabric_changed_items": fabric_changed_items,
         "git_changed_files": git_changed_files,
         "deploy_relevant_files": deploy_relevant_files,
@@ -35,19 +48,11 @@ def write_job_summary(plan: dict) -> None:
     if not summary_path:
         return
 
-    deployment_reason = ""
-
-    if not plan["deploy_relevant"]:
-        deployment_reason = "No deploy-relevant changes detected."
-    elif plan["environment"] != "prod":
-        deployment_reason = "Not a production environment."
-    else:
-        deployment_reason = "Deployment conditions satisfied."
-
     lines = [
         "# Deployment Plan Summary",
         "",
         f"- **Environment:** `{plan['environment']}`",
+        f"- **Branch:** `{plan['branch']}`",
         f"- **Deploy Relevant:** `{plan['deploy_relevant']}`",
         f"- **Deployment Allowed:** `{plan['deployment_allowed']}`",
         "",
@@ -76,7 +81,7 @@ def write_job_summary(plan: dict) -> None:
     lines.extend([
         "",
         "## Deployment Decision",
-        deployment_reason,
+        plan["policy_decision_reason"],
     ])
 
     with open(summary_path, "a", encoding="utf-8") as f:
@@ -88,6 +93,8 @@ def main():
     artifacts_dir.mkdir(exist_ok=True)
 
     environment = os.environ.get("FABRIC_ENV", "dev")
+
+    branch = os.environ.get("GITHUB_REF_NAME", "main")
 
     fabric_changed_items = []
     try:
@@ -101,6 +108,7 @@ def main():
 
     plan = build_deployment_plan(
         environment=environment,
+        branch=branch,
         fabric_changed_items=fabric_changed_items,
         git_changed_files=git_changed_files,
         deploy_relevant_files=classified["deploy_relevant"],
@@ -113,6 +121,10 @@ def main():
 
     print(f"[INFO] Deployment plan written to: {output_path}")
     print(json.dumps(plan, indent=2))
+
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"deployment_allowed={str(plan['deployment_allowed']).lower()}\n")
 
     if "GITHUB_STEP_SUMMARY" in os.environ:
         print("[INFO] Writing GitHub Actions job summary")

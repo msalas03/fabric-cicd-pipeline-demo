@@ -1,0 +1,12 @@
+{
+    "dev": {
+      "require_main_branch": false,
+      "require_deploy_relevant_changes": false,
+      "require_approval": false
+    },
+    "prod": {
+      "require_main_branch": true,
+      "require_deploy_relevant_changes": true,
+      "require_approval": true
+    }
+  }
