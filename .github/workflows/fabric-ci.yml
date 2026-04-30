@@ -95,14 +95,37 @@ jobs:
       name: ${{ github.event.inputs.fabric_env || 'dev' }}
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Download deployment plan artifact
         uses: actions/download-artifact@v4
         with:
           name: deployment-plan
           path: artifacts
 
+      - name: Promote deployment plan
+        if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
+        run: python -m scripts.promote_deployment_plan
+
+      - name: Upload promoted deployment plan artifact
+        if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
+        uses: actions/upload-artifact@v4
+        with:
+          name: promoted-deployment-plan
+          path: artifacts/promoted_deployment_plan.json
+
       - name: Show deployment plan
         run: cat artifacts/deployment_plan.json
+
+      - name: Show promoted deployment plan
+        if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
+        run: cat artifacts/promoted_deployment_plan.json
 
       - name: Deployment placeholder
         if: needs.validate.outputs.deployment_allowed == 'true'

@@ -30,6 +30,8 @@ def build_deployment_plan(
     )
 
     return {
+        "source_environment": environment,
+        "promotion_target": None,
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "environment": environment,
         "branch": branch,
