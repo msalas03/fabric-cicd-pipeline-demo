@@ -2,199 +2,241 @@
 
 ## Overview
 
-This project demonstrates a structured approach to building CI/CD workflows using the **Fabric CLI**, **Fabric-CICD Python SDK**, and **GitHub Actions**.
+This project demonstrates a **production-style CI/CD pipeline** using:
 
-The focus is on moving from manual, command-line interactions to **config-driven, automated deployment pipelines** that are maintainable, testable, and CI/CD-ready.
-
----
-
-## Objectives
-
-* Understand how Fabric CLI interacts with remote services
-* Transition from CLI-based execution to SDK-based automation
-* Build reusable, config-driven deployment logic
-* Implement fail-fast validation patterns
-* Integrate workflows into GitHub Actions
-
----
-
-## Tech Stack
-
-* Python 3.13
-* fabric-cli
-* fabric-cicd (v1.0.0)
+* Fabric CLI
+* Fabric-CICD Python SDK
 * GitHub Actions
-* JSON-based configuration
+* Policy-driven deployment logic
+
+The pipeline evolves from basic command execution into a **modular, environment-aware, and policy-governed deployment system**.
 
 ---
 
-## Architecture Overview
+## Key Features
 
-This project demonstrates two approaches to automation:
-
-### 1. CLI-Based Workflow
+### 1. Multi-Stage CI/CD Pipeline
 
 ```text
-Python Script → subprocess → fabric-cli → Remote Services
+lint → test → validate → deploy
 ```
 
-* Fast to prototype and useful for manual execution
-* Relies on environment variables and shell context
-* Returns unstructured output (stdout/stderr)
+* **Linting (Ruff)** ensures code quality
+* **Unit tests (pytest)** validate behavior
+* **Validation stage** evaluates environment and deployment plan
+* **Deploy stage** executes only when policy allows
 
 ---
 
-### 2. SDK-Based Workflow
+### 2. Environment-Aware Behavior
 
-```text
-Python Script → fabric_cicd SDK → Structured Objects → Remote Services
+The pipeline supports:
+
+* `dev` → relaxed validation, no approvals
+* `prod` → strict validation, approval required
+
+Environment is controlled via:
+
+```yaml
+workflow_dispatch → fabric_env input
 ```
 
-* Uses typed inputs (e.g., `TokenCredential`)
-* Returns structured results (`DeploymentResult`)
-* Better suited for CI/CD, testing, and scalable automation
+---
+
+### 3. Policy-Driven Deployment
+
+Deployment rules are centralized in:
+
+```text
+policies/deployment_policy.json
+```
+
+Example:
+
+```json
+{
+  "dev": {
+    "require_main_branch": false,
+    "require_deploy_relevant_changes": false,
+    "require_approval": false
+  },
+  "prod": {
+    "require_main_branch": true,
+    "require_deploy_relevant_changes": true,
+    "require_approval": true
+  }
+}
+```
+
+A Python policy evaluator determines:
+
+* whether deployment is allowed
+* which checks failed
+* why the decision was made
+
+---
+
+### 4. Change Detection (Git + SDK)
+
+The pipeline detects changes using:
+
+* Fabric SDK (`get_changed_items`)
+* Git diff (`git diff --name-only`)
+
+Changes are classified as:
+
+* **Deploy-relevant**
+* **Non-deploy**
+
+---
+
+### 5. Deployment Plan Artifact
+
+Each run generates:
+
+```text
+artifacts/deployment_plan.json
+```
+
+This includes:
+
+* environment
+* branch
+* changed files
+* deploy relevance
+* policy decision
+* reasoning
+
+Example:
+
+```json
+{
+  "environment": "dev",
+  "branch": "main",
+  "deploy_relevant": true,
+  "deployment_allowed": false,
+  "policy_decision_reason": "Not a production environment."
+}
+```
+
+---
+
+### 6. GitHub Actions Job Summary
+
+Each run produces a **human-readable summary** directly in the Actions UI:
+
+* environment
+* changed files
+* deploy-relevant files
+* policy decision
+* deployment outcome
+
+---
+
+### 7. Reusable Composite Action
+
+The pipeline extracts logic into a reusable component:
+
+```text
+.github/actions/deployment-plan/
+```
+
+This action:
+
+* sets up Python
+* installs dependencies
+* detects changes
+* generates deployment plan
+* exposes `deployment_allowed`
+
+This enables reuse across workflows and projects.
+
+---
+
+### 8. Deployment Safety Controls
+
+Deployment only proceeds when:
+
+* environment is `prod`
+* branch is `main`
+* deploy-relevant changes exist
+* policy allows deployment
+* GitHub Environment approval is granted
 
 ---
 
 ## Project Structure
 
 ```text
-fabric-cicd-pipeline-demo/
-│
-├── .github/workflows/        # CI/CD pipelines
-├── configs/                 # JSON configuration files
-├── scripts/                 # Python automation scripts
-├── notes/                   # Learning modules and breakdowns
-├── requirements.txt         # Python dependencies
-└── README.md
+.github/
+  workflows/
+  actions/
+    deployment-plan/
+
+configs/
+  dev/
+  prod/
+
+policies/
+  deployment_policy.json
+
+scripts/
+  create_slice.py
+  detect_changed_items.py
+  evaluate_deployment_policy.py
+  generate_deployment_plan.py
+  validate_fabric_env.py
+
+tests/
+
+artifacts/ (generated at runtime)
 ```
 
 ---
 
-## Key Components
+## Pipeline Flow
 
-### Config-Driven Design
-
-Deployment inputs are externalized into JSON files:
-
-* `slice_config.json`
-* `graph-definition.json`
-
-This enables:
-
-* Reusability
-* Separation of logic and configuration
-* Easier CI/CD integration
+```text
+1. Lint code
+2. Run tests
+3. Detect changes
+4. Generate deployment plan
+5. Evaluate deployment policy
+6. Upload artifact
+7. Validate environment
+8. Deploy (if allowed)
+```
 
 ---
 
-### CLI Automation
+## Key Concepts Demonstrated
 
-`scripts/create_slice.py`:
-
-* Builds dynamic CLI commands
-* Executes via subprocess
-* Captures stdout/stderr
-* Implements environment validation
-
----
-
-### SDK Integration
-
-`scripts/deploy_with_sdk.py`:
-
-* Uses `fabric_cicd.deploy_with_config`
-* Demonstrates required inputs (config + `TokenCredential`)
-* Inspects core SDK objects:
-
-  * `FabricWorkspace`
-  * `DeploymentResult`
-  * `get_changed_items`
-
----
-
-### Validation Layer
-
-`scripts/validate_fabric_env.py`:
-
-* Ensures required environment variables exist
-* Implements **fail-fast behavior**
-* Prevents invalid pipeline execution
-
----
-
-### CI/CD Pipeline
-
-`.github/workflows/fabric-ci.yml`:
-
-* Runs on push and manual trigger
-* Installs dependencies
-* Executes Python scripts
-* Validates environment configuration
-
----
-
-## Key Learnings
-
-### CLI vs SDK Tradeoff
-
-* CLI is useful for quick execution and experimentation, but harder to scale and test in automation-heavy workflows
-* SDK provides structured inputs/outputs and better integration for automation
-
----
-
-### Fail-Fast Design
-
-Early validation of environment variables and dependencies:
-
-* Reduces debugging complexity
-* Prevents wasted CI/CD runs
-* Improves reliability
-
----
-
-### Environment-Driven Configuration
-
-The workflow depends on:
-
-* Service endpoints
-* Authentication tokens
-* Runtime environment variables
-
----
-
-## Example Workflow Execution
-
-1. GitHub Action is triggered
-2. Python environment is initialized
-3. Dependencies are installed
-4. Validation script checks environment variables
-5. SDK inspection script runs successfully
-
----
-
-## Limitations (Intentional)
-
-This project does **not** include real Fabric credentials.
-Instead, it focuses on:
-
-* Structure
-* Automation patterns
-* Pipeline design
-
-This mirrors early-stage CI/CD development before secrets are introduced.
+* CI/CD pipeline design
+* Policy-based deployment decisions
+* Environment-aware configuration
+* Change-based deployment gating
+* Artifact-driven workflows
+* Reusable GitHub Actions
+* Separation of concerns (policy vs execution)
 
 ---
 
 ## Future Enhancements
 
-* Integrate GitHub Secrets for real authentication
-* Implement selective deployment using `get_changed_items`
-* Add multi-environment support (dev/test/prod)
-* Extend pipeline with approval gates
+* GitHub Environments with required reviewers
+* Secrets management for real deployments
+* Promotion model (dev → prod)
+* Matrix testing across environments
+* Reusable workflows across repositories
 
 ---
 
 ## Key Takeaway
 
-This project demonstrates how to transition from manual CLI usage to a **structured, scalable CI/CD pipeline** using Python and GitHub Actions. The SDK-based approach provides a more maintainable and testable foundation for real-world deployment automation.
+This project demonstrates how to move from simple automation to a **structured, policy-driven CI/CD system** that separates decision logic, execution, and environment behavior.
+
+---
+
+## Status
+
+![CI](https://github.com/<your-username>/<repo>/actions/workflows/fabric-ci.yml/badge.svg)
