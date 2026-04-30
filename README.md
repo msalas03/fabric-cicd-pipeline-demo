@@ -239,4 +239,4 @@ This project demonstrates how to move from simple automation to a **structured, 
 
 ## Status
 
-![CI](https://github.com/<your-username>/<repo>/actions/workflows/fabric-ci.yml/badge.svg)
+![Fabric CI/CD Pipeline](https://github.com/msalas03/fabric-cicd-pipeline-demo/actions/workflows/fabric-ci.yml/badge.svg)
