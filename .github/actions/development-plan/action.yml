@@ -1,0 +1,30 @@
+name: "Generate Deployment Plan"
+description: "Generate a deployment plan artifact and policy decision"
+
+inputs:
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.13"
+
+outputs:
+  deployment_allowed:
+    description: "Whether deployment is allowed by policy"
+    value: ${{ steps.plan.outputs.deployment_allowed }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install dependencies
+      shell: bash
+      run: python -m pip install -r requirements.txt
+
+    - name: Generate deployment plan
+      id: plan
+      shell: bash
+      run: python -m scripts.generate_deployment_plan
