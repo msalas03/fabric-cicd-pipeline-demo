@@ -42,7 +42,7 @@ def test_build_deployment_plan_with_deploy_relevant_files():
     assert plan["deploy_relevant"] is True
     assert plan["deployment_allowed"] is True
     assert plan["policy_failed_checks"] == []
-    assert plan["policy_decision_reason"] == "Deployment policy checks passed."
+    assert plan["policy_decision_reason"] == "Deployment requires approval."
     assert plan["git_changed_files"] == ["scripts/create_slice.py"]
     assert plan["deploy_relevant_files"] == ["scripts/create_slice.py"]
     assert plan["non_deploy_files"] == []
@@ -68,4 +68,26 @@ def test_build_deployment_plan_without_deploy_relevant_files():
     assert plan["git_changed_files"] == ["README.md"]
     assert plan["deploy_relevant_files"] == []
     assert plan["non_deploy_files"] == ["README.md"]
+    assert "generated_at_utc" in plan
+
+
+def test_build_deployment_plan_for_qa_requires_approval():
+    plan = build_deployment_plan(
+        environment="qa",
+        branch="main",
+        fabric_changed_items=[],
+        git_changed_files=["scripts/create_slice.py"],
+        deploy_relevant_files=["scripts/create_slice.py"],
+        non_deploy_files=[],
+    )
+
+    assert plan["environment"] == "qa"
+    assert plan["branch"] == "main"
+    assert plan["deploy_relevant"] is True
+    assert plan["deployment_allowed"] is True
+    assert plan["policy_failed_checks"] == []
+    assert plan["policy_decision_reason"] == "Deployment requires approval."
+    assert plan["git_changed_files"] == ["scripts/create_slice.py"]
+    assert plan["deploy_relevant_files"] == ["scripts/create_slice.py"]
+    assert plan["non_deploy_files"] == []
     assert "generated_at_utc" in plan

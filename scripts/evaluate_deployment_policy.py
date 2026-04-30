@@ -34,8 +34,11 @@ def evaluate_policy(
         failed_checks.append("deploy_relevant_changes_required")
 
     deployment_allowed = len(failed_checks) == 0
+    approval_required = env_policy.get("require_approval", False)
 
-    if deployment_allowed:
+    if approval_required and deployment_allowed:
+        decision_reason = "Deployment requires approval."
+    elif deployment_allowed:
         decision_reason = "Deployment policy checks passed."
     else:
         reason_map = {
@@ -49,6 +52,7 @@ def evaluate_policy(
         "deployment_allowed": deployment_allowed,
         "failed_checks": failed_checks,
         "decision_reason": decision_reason,
+        "approval_required": approval_required,
     }
 
 

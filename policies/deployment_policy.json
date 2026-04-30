@@ -1,12 +1,20 @@
 {
-    "dev": {
-      "require_main_branch": false,
-      "require_deploy_relevant_changes": false,
-      "require_approval": false
-    },
-    "prod": {
-      "require_main_branch": true,
-      "require_deploy_relevant_changes": true,
-      "require_approval": true
-    }
+  "dev": {
+    "require_main_branch": false,
+    "require_deploy_relevant_changes": false,
+    "require_approval": false,
+    "require_secrets": false
+  },
+  "qa": {
+    "require_main_branch": true,
+    "require_deploy_relevant_changes": true,
+    "require_approval": true,
+    "require_secrets": false
+  },
+  "prod": {
+    "require_main_branch": true,
+    "require_deploy_relevant_changes": true,
+    "require_approval": true,
+    "require_secrets": true
   }
+}
