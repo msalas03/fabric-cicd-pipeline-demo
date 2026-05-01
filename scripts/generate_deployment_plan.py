@@ -43,6 +43,8 @@ def build_deployment_plan(
         "git_changed_files": git_changed_files,
         "deploy_relevant_files": deploy_relevant_files,
         "non_deploy_files": non_deploy_files,
+        "source_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+        "source_commit_sha": os.environ.get("GITHUB_SHA", ""),
     }
 
 def write_job_summary(plan: dict) -> None:

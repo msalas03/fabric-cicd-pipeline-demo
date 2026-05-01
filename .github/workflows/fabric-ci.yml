@@ -14,13 +14,29 @@ on:
           - dev
           - qa
           - prod
+      source_run_id:
+        description: "Optional run ID to promote from"
+        required: false
+        default: ""
+        type: string
+
+defaults:
+  run:
+    shell: bash
 
 env:
   FABRIC_ENV: ${{ github.event.inputs.fabric_env || 'dev' }}
 
+concurrency:
+  group: fabric-cicd-${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.fabric_env || 'dev' }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
@@ -42,6 +58,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: lint
+    timeout-minutes: 10
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
@@ -63,8 +82,9 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     needs: test
-    outputs:
-      deployment_allowed: ${{ steps.plan_action.outputs.deployment_allowed }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Check out repository
@@ -82,8 +102,9 @@ jobs:
       - name: Upload deployment plan artifact
         uses: actions/upload-artifact@v4
         with:
-          name: deployment-plan
+          name: deployment-plan-${{ github.event.inputs.fabric_env || 'dev' }}
           path: artifacts/deployment_plan.json
+          retention-days: 14
 
       - name: Run environment validation
         run: python -m scripts.validate_fabric_env
@@ -91,8 +112,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: validate
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
     environment:
       name: ${{ github.event.inputs.fabric_env || 'dev' }}
+    env:
+      SOURCE_RUN_ID: ${{ github.event.inputs.source_run_id || '' }}
+      SOURCE_ARTIFACT_NAME: deployment-plan-${{ github.event.inputs.fabric_env || 'dev' }}
 
     steps:
       - name: Check out repository
@@ -103,11 +131,32 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Download deployment plan artifact
+      - name: Check GitHub CLI
+        if: github.event.inputs.source_run_id != ''
+        run: gh --version
+
+      - name: Authenticate GitHub CLI
+        if: github.event.inputs.source_run_id != ''
+        run: echo "${{ github.token }}" | gh auth login --with-token
+
+      - name: Validate promotion inputs
+        if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
+        run: |
+          if [ -z "${SOURCE_RUN_ID}" ]; then
+            echo "SOURCE_RUN_ID is required for qa/prod promotion runs."
+            exit 1
+          fi
+
+      - name: Download deployment plan artifact from current run
+        if: (github.event.inputs.fabric_env || 'dev') == 'dev' && github.event.inputs.source_run_id == ''
         uses: actions/download-artifact@v4
         with:
-          name: deployment-plan
+          name: deployment-plan-${{ github.event.inputs.fabric_env || 'dev' }}
           path: artifacts
+
+      - name: Download deployment plan artifact from source run
+        if: github.event.inputs.source_run_id != ''
+        run: python -m scripts.download_promoted_artifact
 
       - name: Promote deployment plan
         if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
@@ -117,7 +166,7 @@ jobs:
         if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
         uses: actions/upload-artifact@v4
         with:
-          name: promoted-deployment-plan
+          name: promoted-deployment-plan-${{ github.event.inputs.fabric_env || 'dev' }}
           path: artifacts/promoted_deployment_plan.json
 
       - name: Show deployment plan
@@ -127,12 +176,16 @@ jobs:
         if: github.event.inputs.fabric_env == 'qa' || github.event.inputs.fabric_env == 'prod'
         run: cat artifacts/promoted_deployment_plan.json
 
+      - name: Evaluate promoted artifact
+        id: artifact_gate
+        run: python -m scripts.evaluate_promoted_artifact
+
       - name: Deployment placeholder
-        if: needs.validate.outputs.deployment_allowed == 'true'
+        if: steps.artifact_gate.outputs.deployment_allowed == 'true'
         run: |
           echo "Deploying because policy evaluation allowed deployment"
 
       - name: Skip deployment
-        if: needs.validate.outputs.deployment_allowed != 'true'
+        if: steps.artifact_gate.outputs.deployment_allowed != 'true'
         run: |
           echo "Skipping deployment - policy evaluation did not allow deployment"
